@@ -1,0 +1,23 @@
+<products>
+    <product>
+        <productId>1</productId>
+        <productName>Apple Iphone</productName>
+        <productDesc>Aplle cell {from xml}</productDesc>
+        <unit>10</unit>
+        <price>320</price>
+    </product>
+    <product>
+        <productId>2</productId>
+        <productName>Apple Iphone 2</productName>
+        <productDesc>Aplle cell 2 {from xml}</productDesc>
+        <unit>10</unit>
+        <price>32</price>
+    </product>
+    <product>
+        <productId>3</productId>
+        <productName>Apple Iphone 3</productName>
+        <productDesc>Aplle cell 3 {from xml}</productDesc>
+        <unit>10</unit>
+        <price>32</price>
+    </product>
+</products>
