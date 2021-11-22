@@ -67,6 +67,7 @@ public class BatchCondifguration {
 
     @Autowired
     private InMemeItemProcessor inMemeItemProcessor;
+
     @Autowired
     private DataSource dataSource;
 
