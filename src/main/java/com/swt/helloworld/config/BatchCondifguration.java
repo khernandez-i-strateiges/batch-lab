@@ -115,6 +115,7 @@ public class BatchCondifguration {
 
     /**
      * method to read .XML file
+     *
      * @param inputFile
      * @return
      */
@@ -140,6 +141,7 @@ public class BatchCondifguration {
 
     /**
      * method to read input file .CSV
+     *
      * @param inputFile
      * @return
      */
@@ -177,6 +179,7 @@ public class BatchCondifguration {
 
     /**
      * method to read from Query native from data base.
+     *
      * @return
      */
     @Bean
@@ -194,6 +197,7 @@ public class BatchCondifguration {
 
     /**
      * method to read from JPA repository.
+     *
      * @return
      */
     @Bean
@@ -209,6 +213,7 @@ public class BatchCondifguration {
 
     /**
      * method to read file json from input batch process
+     *
      * @param inputFile
      * @return
      */
@@ -224,6 +229,7 @@ public class BatchCondifguration {
 
     /**
      * method to read from service of product. (read Json response)
+     *
      * @return
      */
     @Bean
@@ -297,6 +303,7 @@ public class BatchCondifguration {
 
     /**
      * method to write output  file in the batch process
+     *
      * @param output param that recibe route from write output file
      * @return writer
      */
