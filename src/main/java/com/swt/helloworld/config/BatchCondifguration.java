@@ -25,6 +25,7 @@ import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.adapter.ItemReaderAdapter;
 import org.springframework.batch.item.data.RepositoryItemReader;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
+import org.springframework.batch.item.file.FlatFileFooterCallback;
 import org.springframework.batch.item.file.FlatFileHeaderCallback;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.FlatFileItemWriter;
@@ -50,6 +51,8 @@ import javax.sql.DataSource;
 import java.io.IOException;
 import java.io.Writer;
 import java.math.BigDecimal;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -328,6 +331,15 @@ public class BatchCondifguration {
             @Override
             public void writeHeader(Writer writer) throws IOException {
                 writer.write("productId | prodName | productDesc | unit | price");
+            }
+        });
+        // this properties have to permission to Override in the file or write in the next Line False/True
+        writer.setAppendAllowed(true);
+        // create footer to output file
+        writer.setFooterCallback(new FlatFileFooterCallback() {
+            @Override
+            public void writeFooter(Writer writer) throws IOException {
+                writer.write("this file created on : " + new SimpleDateFormat().format(new Date()));
             }
         });
         return writer;
