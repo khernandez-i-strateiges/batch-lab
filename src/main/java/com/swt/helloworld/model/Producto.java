@@ -1,5 +1,7 @@
 package com.swt.helloworld.model;
 
+import com.thoughtworks.xstream.annotations.XStreamAlias;
+
 import javax.persistence.*;
 import java.math.BigDecimal;
 
@@ -10,6 +12,7 @@ public class Producto {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_product")
+    @XStreamAlias("prodId")
     private Long productId;
 
     @Column(name = "product_name")

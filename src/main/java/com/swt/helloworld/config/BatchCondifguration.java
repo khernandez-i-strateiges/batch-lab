@@ -24,6 +24,7 @@ import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.adapter.ItemReaderAdapter;
 import org.springframework.batch.item.data.RepositoryItemReader;
+import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.batch.item.file.FlatFileFooterCallback;
 import org.springframework.batch.item.file.FlatFileHeaderCallback;
@@ -35,6 +36,7 @@ import org.springframework.batch.item.file.transform.*;
 import org.springframework.batch.item.json.JacksonJsonObjectReader;
 import org.springframework.batch.item.json.JsonItemReader;
 import org.springframework.batch.item.xml.StaxEventItemReader;
+import org.springframework.batch.item.xml.StaxEventItemWriter;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -45,6 +47,7 @@ import org.springframework.core.io.FileSystemResource;
 import org.springframework.data.domain.Sort;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.oxm.jaxb.Jaxb2Marshaller;
+import org.springframework.oxm.xstream.XStreamMarshaller;
 
 import javax.persistence.Column;
 import javax.sql.DataSource;
@@ -286,7 +289,8 @@ public class BatchCondifguration {
                 //.reader(jsonItemReader(null)) lectura de archivos json
                 //lecturas de web services.
                 .reader(serviceItemReader())
-                .writer(flagFileItemWriter(null))
+                //.writer(flagFileItemWriter(null)) // escribir .CSV
+                .writer(xmlWriten(null))
                 .build();
     }
 
@@ -305,7 +309,7 @@ public class BatchCondifguration {
      */
 
     /**
-     * method to write output  file in the batch process
+     * method to write output  file in the batch process (.CSV)
      *
      * @param output param that recibe route from write output file
      * @return writer
@@ -333,7 +337,7 @@ public class BatchCondifguration {
                 writer.write("productId | prodName | productDesc | unit | price");
             }
         });
-        // this properties have to permission to Override in the file or write in the next Line False/True
+        // this properties have to permission to overwite in the file or write in the next Line False/True
         writer.setAppendAllowed(true);
         // create footer to output file
         writer.setFooterCallback(new FlatFileFooterCallback() {
@@ -344,4 +348,36 @@ public class BatchCondifguration {
         });
         return writer;
     }
+
+    /**
+     * method to write XML file to output
+     *
+     * @param output
+     * @return
+     */
+    @Bean
+    @StepScope
+    public StaxEventItemWriter xmlWriten(@Value("#{jobParameters['fileOutput']}") FileSystemResource output) {
+        XStreamMarshaller marshaller = new XStreamMarshaller();
+        HashMap<String, Class> aliases = new HashMap<>();
+        aliases.put("product", Producto.class);
+        marshaller.setAliases(aliases);
+        marshaller.setAutodetectAnnotations(true);
+        StaxEventItemWriter staxEventItemWriter = new StaxEventItemWriter();
+        staxEventItemWriter.setResource(output);
+        staxEventItemWriter.setMarshaller(marshaller);
+        staxEventItemWriter.setRootTagName("Products");
+        return staxEventItemWriter;
+    }
+
+
+    public JdbcBatchItemWriter dbWriter() {
+        JdbcBatchItemWriter writer = new JdbcBatchItemWriter();
+        writer.setDataSource(dataSource);
+        writer.setSql("insert into spring_batch_lab_dev.product ()");
+
+        return null;
+    }
+
+
 }
