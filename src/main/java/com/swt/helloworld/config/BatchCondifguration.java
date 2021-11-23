@@ -6,6 +6,7 @@ import com.swt.helloworld.listener.HwJobExecutionListener;
 import com.swt.helloworld.listener.HwStepExecutionListener;
 import com.swt.helloworld.model.Product;
 import com.swt.helloworld.model.Producto;
+import com.swt.helloworld.procesor.ProductoProcessor;
 import com.swt.helloworld.processor.InMemeItemProcessor;
 import com.swt.helloworld.reader.InMemReader;
 import com.swt.helloworld.reader.ProductServiceAdapter;
@@ -22,10 +23,14 @@ import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.item.ItemReader;
+import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.adapter.ItemReaderAdapter;
 import org.springframework.batch.item.data.RepositoryItemReader;
+import org.springframework.batch.item.data.RepositoryItemWriter;
+import org.springframework.batch.item.database.ItemPreparedStatementSetter;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
+import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
 import org.springframework.batch.item.file.FlatFileFooterCallback;
 import org.springframework.batch.item.file.FlatFileHeaderCallback;
 import org.springframework.batch.item.file.FlatFileItemReader;
@@ -54,9 +59,12 @@ import javax.sql.DataSource;
 import java.io.IOException;
 import java.io.Writer;
 import java.math.BigDecimal;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @EnableBatchProcessing
@@ -290,7 +298,10 @@ public class BatchCondifguration {
                 //lecturas de web services.
                 .reader(serviceItemReader())
                 //.writer(flagFileItemWriter(null)) // escribir .CSV
-                .writer(xmlWriten(null))
+                //.writer(xmlWriten(null)) //escribe en un formato XML
+                //.writer(dbWriter()) //guarda datos a la base de datos
+                .processor(new ProductoProcessor())
+                .writer(itemWriterBuilder())// guarda datos en la base de datos by mapped
                 .build();
     }
 
@@ -371,13 +382,36 @@ public class BatchCondifguration {
     }
 
 
+    /**
+     * method to save items from native query
+     *
+     * @return
+     */
     public JdbcBatchItemWriter dbWriter() {
         JdbcBatchItemWriter writer = new JdbcBatchItemWriter();
         writer.setDataSource(dataSource);
-        writer.setSql("insert into spring_batch_lab_dev.product ()");
-
-        return null;
+        writer.setSql("insert into spring_batch_lab_dev.product (product_name,product_desc,unit,price) " +
+                "values (?,?,?,?)");
+        writer.setItemPreparedStatementSetter(new ItemPreparedStatementSetter<Producto>() {
+            @Override
+            public void setValues(Producto item, PreparedStatement ps) throws SQLException {
+                ps.setString(1, item.getProdName() + " new Product");
+                ps.setString(2, item.getProductDesc());
+                ps.setInt(3, item.getUnit());
+                ps.setBigDecimal(4, item.getPrice());
+            }
+        });
+        return writer;
     }
 
 
+    @Bean
+    public ItemWriter itemWriterBuilder() {
+        return new JdbcBatchItemWriterBuilder<Producto>()
+                .dataSource(dataSource)
+                .sql("insert into spring_batch_lab_dev.product (product_name,product_desc,unit,price) " +
+                        "values (:prodName ,:productDesc ,:unit ,:price )")
+                .beanMapped()
+                .build();
+    }
 }
