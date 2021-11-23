@@ -1,5 +1,6 @@
 package com.swt.helloworld.config;
 
+
 import com.swt.helloworld.ProductoRespository;
 import com.swt.helloworld.listener.HwJobExecutionListener;
 import com.swt.helloworld.listener.HwStepExecutionListener;
@@ -7,7 +8,6 @@ import com.swt.helloworld.model.Product;
 import com.swt.helloworld.model.Producto;
 import com.swt.helloworld.processor.InMemeItemProcessor;
 import com.swt.helloworld.reader.InMemReader;
-
 import com.swt.helloworld.reader.ProductServiceAdapter;
 import com.swt.helloworld.services.ProductService;
 import com.swt.helloworld.writer.ConsoleItemWriter;
@@ -25,12 +25,12 @@ import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.adapter.ItemReaderAdapter;
 import org.springframework.batch.item.data.RepositoryItemReader;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
+import org.springframework.batch.item.file.FlatFileHeaderCallback;
 import org.springframework.batch.item.file.FlatFileItemReader;
+import org.springframework.batch.item.file.FlatFileItemWriter;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
-import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
-import org.springframework.batch.item.file.transform.FixedLengthTokenizer;
-import org.springframework.batch.item.file.transform.Range;
+import org.springframework.batch.item.file.transform.*;
 import org.springframework.batch.item.json.JacksonJsonObjectReader;
 import org.springframework.batch.item.json.JsonItemReader;
 import org.springframework.batch.item.xml.StaxEventItemReader;
@@ -45,7 +45,11 @@ import org.springframework.data.domain.Sort;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.oxm.jaxb.Jaxb2Marshaller;
 
+import javax.persistence.Column;
 import javax.sql.DataSource;
+import java.io.IOException;
+import java.io.Writer;
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -105,6 +109,15 @@ public class BatchCondifguration {
         return new InMemReader();
     }
 
+    /**
+     * methods to reader files
+     */
+
+    /**
+     * method to read .XML file
+     * @param inputFile
+     * @return
+     */
     @StepScope
     @Bean
     public StaxEventItemReader xlmItemReader(
@@ -125,6 +138,11 @@ public class BatchCondifguration {
     }
 
 
+    /**
+     * method to read input file .CSV
+     * @param inputFile
+     * @return
+     */
     @StepScope
     @Bean
     public FlatFileItemReader flatFileItemReader(
@@ -157,6 +175,10 @@ public class BatchCondifguration {
     }
 
 
+    /**
+     * method to read from Query native from data base.
+     * @return
+     */
     @Bean
     public JdbcCursorItemReader jdbcCursorItemReader() {
         JdbcCursorItemReader reader = new JdbcCursorItemReader();
@@ -170,6 +192,10 @@ public class BatchCondifguration {
         return reader;
     }
 
+    /**
+     * method to read from JPA repository.
+     * @return
+     */
     @Bean
     public ItemReader itemReader() {
         RepositoryItemReader<Producto> reader = new RepositoryItemReader<Producto>();
@@ -181,6 +207,12 @@ public class BatchCondifguration {
         return reader;
     }
 
+    /**
+     * method to read file json from input batch process
+     * @param inputFile
+     * @return
+     */
+
     @StepScope
     @Bean
     public JsonItemReader jsonItemReader(
@@ -190,6 +222,10 @@ public class BatchCondifguration {
         return reader;
     }
 
+    /**
+     * method to read from service of product. (read Json response)
+     * @return
+     */
     @Bean
     public ItemReaderAdapter serviceItemReader() {
         ItemReaderAdapter reader = new ItemReaderAdapter();
@@ -235,13 +271,13 @@ public class BatchCondifguration {
                         <Integer, Integer>chunk(3)
                 //.reader(flatFileItemReader(null)) archivos csv
                 //.reader(xlmItemReader(null)) archivos xml
-                //.reader(flatFixFileItemReader(null)) archivos txt
+                //.reader(flatFixFileItemReader(null)) archivos txt con un tamaño fijo
                 //.reader(jdbcCursorItemReader()) conexion cruda a la base de datos
                 //.reader(itemReader()) conexion mediante JPA Repository
                 //.reader(jsonItemReader(null)) lectura de archivos json
                 //lecturas de web services.
                 .reader(serviceItemReader())
-                .writer(new ConsoleItemWriter())
+                .writer(flagFileItemWriter(null))
                 .build();
     }
 
@@ -253,5 +289,40 @@ public class BatchCondifguration {
                 .start(step1())
                 .next(step2())
                 .build();
+    }
+
+    /**
+     * methods to writer files
+     */
+
+    /**
+     * method to write output  file in the batch process
+     * @param output param that recibe route from write output file
+     * @return writer
+     */
+    @StepScope
+    @Bean
+    public FlatFileItemWriter flagFileItemWriter(@Value("#{jobParameters['fileOutput']}") FileSystemResource output) {
+        FlatFileItemWriter writer = new FlatFileItemWriter();
+        writer.setResource(output);
+        writer.setLineAggregator(new DelimitedLineAggregator() {
+            {
+                setDelimiter("|");
+                setFieldExtractor(new BeanWrapperFieldExtractor() {
+                    {
+                        setNames(new String[]{"productId", "prodName", "productDesc", "unit", "price"});
+                    }
+                });
+            }
+        });
+
+        //definimos una columna de header para el archvi de output de nuestro proceso batch
+        writer.setHeaderCallback(new FlatFileHeaderCallback() {
+            @Override
+            public void writeHeader(Writer writer) throws IOException {
+                writer.write("productId | prodName | productDesc | unit | price");
+            }
+        });
+        return writer;
     }
 }
