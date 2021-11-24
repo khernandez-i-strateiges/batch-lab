@@ -347,7 +347,7 @@ public class BatchCondifguration {
             }
         });
 
-        //definimos una columna de header para el archvi de output de nuestro proceso batch
+        //definimos una columna de header para el archivo de output de nuestro proceso batch
         writer.setHeaderCallback(new FlatFileHeaderCallback() {
             @Override
             public void writeHeader(Writer writer) throws IOException {
