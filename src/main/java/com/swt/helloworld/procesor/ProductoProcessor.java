@@ -17,7 +17,7 @@ public class ProductoProcessor implements ItemProcessor<Producto, Producto> {
     @Override
     public Producto process(Producto item) throws Exception {
         if (item.getProductId() == 2) {
-            return null;
+            throw  new RuntimeException("Because id == 2");
         } else {
             item.setProductDesc(item.getProductDesc().toUpperCase());
         }

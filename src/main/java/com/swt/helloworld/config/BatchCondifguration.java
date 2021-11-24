@@ -302,7 +302,7 @@ public class BatchCondifguration {
                 //.writer(flagFileItemWriter(null)) // escribir .CSV
                 //.writer(xmlWriten(null)) //escribe en un formato XML
                 //.writer(dbWriter()) //guarda datos a la base de datos
-                //.processor(new ProductoProcessor())
+                .processor(new ProductoProcessor())
                 //.writer(itemWriterBuilder())// guarda datos en la base de datos by mapped
                 .writer(itemWriterClassfier())
                 .faultTolerant()
