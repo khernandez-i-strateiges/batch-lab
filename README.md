@@ -401,8 +401,38 @@ public Step step2() {
 ```
 
 
+## Processor data 
+
+**Este proceso hace que se ignore los productos con id = 2**
+
+```java
+@Override
+public Producto process(Producto item) throws Exception {
+    if (item.getProductId() == 2) {
+        return null;
+    } else {
+        item.setProductDesc(item.getProductDesc().toUpperCase());
+    }
+    return item;
+}
+```
+
+Momento en el que se manda a llamar el processor:
 
 
+```java
+@Bean
+public Step step2() {
+    return steps.get("step2").
+        <Integer, Integer>chunk(3)
+        .reader(serviceItemReader())
+        .writer(xmlWriten(null)) //escribe en un formato XML
+        .processor(new ProductoProcessor())
+        .writer(itemWriterClassfier()).//classifier para clasificacion de registros
+              stream(xmlWritenAprobado()).stream(xmlWritenRechasado()) // seleccion de que metodo ejecutar
+        .build();
+}
+```
 
 ## 🚀 About Me
 I'm a full stack developer...
