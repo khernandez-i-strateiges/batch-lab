@@ -1,6 +1,7 @@
 package com.swt.helloworld.config;
 
 
+import com.swt.helloworld.Clssifier.myClassifier;
 import com.swt.helloworld.ProductoRespository;
 import com.swt.helloworld.listener.HwJobExecutionListener;
 import com.swt.helloworld.listener.HwStepExecutionListener;
@@ -40,11 +41,14 @@ import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.transform.*;
 import org.springframework.batch.item.json.JacksonJsonObjectReader;
 import org.springframework.batch.item.json.JsonItemReader;
+import org.springframework.batch.item.support.ClassifierCompositeItemProcessor;
+import org.springframework.batch.item.support.ClassifierCompositeItemWriter;
 import org.springframework.batch.item.xml.StaxEventItemReader;
 import org.springframework.batch.item.xml.StaxEventItemWriter;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.classify.BackToBackPatternClassifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
@@ -298,10 +302,12 @@ public class BatchCondifguration {
                 //lecturas de web services.
                 .reader(serviceItemReader())
                 //.writer(flagFileItemWriter(null)) // escribir .CSV
-                //.writer(xmlWriten(null)) //escribe en un formato XML
+                .writer(xmlWriten(null)) //escribe en un formato XML
                 //.writer(dbWriter()) //guarda datos a la base de datos
-                .processor(new ProductoProcessor())
-                .writer(itemWriterBuilder())// guarda datos en la base de datos by mapped
+                //.processor(new ProductoProcessor())
+                //.writer(itemWriterBuilder())// guarda datos en la base de datos by mapped
+                .writer(itemWriterClassfier()).//classifier para clasificacion de registros
+                        stream(xmlWritenAprobado()).stream(xmlWritenRechasado()) // seleccion de que metodo ejecutar
                 .build();
     }
 
@@ -404,7 +410,10 @@ public class BatchCondifguration {
         return writer;
     }
 
-
+    /**
+     * method to save in the data base base native query SQL in JdbcBatchItemWriterBuilder
+     * @return
+     */
     @Bean
     public ItemWriter itemWriterBuilder() {
         return new JdbcBatchItemWriterBuilder<Producto>()
@@ -413,5 +422,69 @@ public class BatchCondifguration {
                         "values (:prodName ,:productDesc ,:unit ,:price )")
                 .beanMapped()
                 .build();
+    }
+
+
+    /**
+     * methos to classifier data based in desition in class : myClassifier
+     * and send data to diferentents method to process : aprobados/rechazados.
+     *
+     * @return
+     */
+    @Bean
+    public ItemWriter<Producto> itemWriterClassfier() {
+        BackToBackPatternClassifier classifier = new BackToBackPatternClassifier();
+        classifier.setRouterDelegate(new myClassifier());
+        classifier.setMatcherMap(new HashMap<String, ItemWriter<? extends Producto>>() {
+            {
+                put("C_APROBADO", xmlWritenAprobado());
+                put("C_RECHAZADO", xmlWritenRechasado());
+            }
+        });
+        ClassifierCompositeItemWriter<Producto> writen = new ClassifierCompositeItemWriter<>();
+        writen.setClassifier(classifier);
+        return writen;
+    }
+
+
+    /**
+     * escritura de archivo xml en base a una ruta para aprobados:
+     * output/product_aprobados.xml
+     *
+     * @return
+     */
+    @Bean
+    public StaxEventItemWriter xmlWritenAprobado() {
+        XStreamMarshaller marshaller = new XStreamMarshaller();
+        HashMap<String, Class> aliases = new HashMap<>();
+        aliases.put("product", Producto.class);
+        marshaller.setAliases(aliases);
+        marshaller.setAutodetectAnnotations(true);
+        StaxEventItemWriter staxEventItemWriter = new StaxEventItemWriter();
+        staxEventItemWriter.setResource(new FileSystemResource("output/product_aprobados.xml"));
+        staxEventItemWriter.setMarshaller(marshaller);
+        staxEventItemWriter.setRootTagName("Products");
+        return staxEventItemWriter;
+    }
+
+
+    /**
+     * escritura de archivo xml en base a una ruta para rechazados:
+     * output/product_rechazados.xml
+     *
+     * @return
+     */
+    @Bean
+    public StaxEventItemWriter xmlWritenRechasado() {
+        XStreamMarshaller marshaller = new XStreamMarshaller();
+        HashMap<String, Class> aliases = new HashMap<>();
+        aliases.put("product", Producto.class);
+        marshaller.setAliases(aliases);
+        marshaller.setAutodetectAnnotations(true);
+        StaxEventItemWriter staxEventItemWriter = new StaxEventItemWriter();
+        staxEventItemWriter.setResource(new FileSystemResource("output/product_rechazados.xml"));
+        staxEventItemWriter.setMarshaller(marshaller);
+        staxEventItemWriter.setRootTagName("Products");
+        return staxEventItemWriter;
     }
 }
