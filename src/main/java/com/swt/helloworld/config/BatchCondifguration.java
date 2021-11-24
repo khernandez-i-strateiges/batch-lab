@@ -2,6 +2,7 @@ package com.swt.helloworld.config;
 
 
 import com.swt.helloworld.Clssifier.myClassifier;
+import com.swt.helloworld.ProductListener;
 import com.swt.helloworld.ProductoRespository;
 import com.swt.helloworld.listener.HwJobExecutionListener;
 import com.swt.helloworld.listener.HwStepExecutionListener;
@@ -22,6 +23,7 @@ import org.springframework.batch.core.configuration.annotation.StepBuilderFactor
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.core.scope.context.ChunkContext;
+import org.springframework.batch.core.step.skip.AlwaysSkipItemSkipPolicy;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
@@ -32,10 +34,7 @@ import org.springframework.batch.item.database.ItemPreparedStatementSetter;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
-import org.springframework.batch.item.file.FlatFileFooterCallback;
-import org.springframework.batch.item.file.FlatFileHeaderCallback;
-import org.springframework.batch.item.file.FlatFileItemReader;
-import org.springframework.batch.item.file.FlatFileItemWriter;
+import org.springframework.batch.item.file.*;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.transform.*;
@@ -241,7 +240,7 @@ public class BatchCondifguration {
     public JsonItemReader jsonItemReader(
             @Value("#{jobParameters['fileInput']}")
                     FileSystemResource inputFile) {
-        JsonItemReader reader = new JsonItemReader(inputFile, new JacksonJsonObjectReader<>(Product.class));
+        JsonItemReader reader = new JsonItemReader(inputFile, new JacksonJsonObjectReader<>(Producto.class));
         return reader;
     }
 
@@ -293,21 +292,24 @@ public class BatchCondifguration {
     public Step step2() {
         return steps.get("step2").
                         <Integer, Integer>chunk(3)
-                //.reader(flatFileItemReader(null)) archivos csv
+                //.reader(flatFileItemReader(null)) // archivos csv
                 //.reader(xlmItemReader(null)) archivos xml
                 //.reader(flatFixFileItemReader(null)) archivos txt con un tamaño fijo
                 //.reader(jdbcCursorItemReader()) conexion cruda a la base de datos
                 //.reader(itemReader()) conexion mediante JPA Repository
-                //.reader(jsonItemReader(null)) lectura de archivos json
-                //lecturas de web services.
-                .reader(serviceItemReader())
+                .reader(jsonItemReader(null)) //lectura de archivos json
+                //.reader(serviceItemReader()) //lecturas de web services.
                 //.writer(flagFileItemWriter(null)) // escribir .CSV
-                .writer(xmlWriten(null)) //escribe en un formato XML
+                //.writer(xmlWriten(null)) //escribe en un formato XML
                 //.writer(dbWriter()) //guarda datos a la base de datos
                 //.processor(new ProductoProcessor())
                 //.writer(itemWriterBuilder())// guarda datos en la base de datos by mapped
-                .writer(itemWriterClassfier()).//classifier para clasificacion de registros
-                        stream(xmlWritenAprobado()).stream(xmlWritenRechasado()) // seleccion de que metodo ejecutar
+                .writer(itemWriterClassfier())
+                .faultTolerant()
+                .skip(FlatFileParseException.class)
+                .skipPolicy(new AlwaysSkipItemSkipPolicy())//classifier para clasificacion de registros
+                .listener(new ProductListener()) // escucha el parseo de este proceso en concreto
+                .stream(xmlWritenAprobado()).stream(xmlWritenRechasado()) // seleccion de que metodo ejecutar
                 .build();
     }
 
@@ -412,6 +414,7 @@ public class BatchCondifguration {
 
     /**
      * method to save in the data base base native query SQL in JdbcBatchItemWriterBuilder
+     *
      * @return
      */
     @Bean

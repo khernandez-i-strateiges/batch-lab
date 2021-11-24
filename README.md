@@ -434,6 +434,64 @@ public Step step2() {
 }
 ```
 
+
+## Saltar la escritura de datos basados en ParseException
+
+Basados en el formato de entrada este proceso se realiza bajo un `@OnSkipInRead` que esta escuchando cada iteracion que se realiza en el procesamiento de la data
+
+Definimos una ruta donde se alojaran los registrios que no cumplan con los estandares que nesecitamos.
+
+```java
+private String writeErrorFileName = "error_items/read_skipped";
+```
+
+Definimos la funcion de escucha: 
+```java
+@OnSkipInRead
+public void onSkipped(Throwable t) {
+    if (t instanceof FlatFileParseException) {
+        FlatFileParseException flag = (FlatFileParseException) t;
+        onSkip(flag.getInput(), writeErrorFileName);
+    }
+}
+```
+
+
+Definimos una funcion que realice la escritura de los datos erroneos basados en la Excepcion.
+```java
+public void onSkip(Object o, String fileName) {
+    try {
+        FileOutputStream fos = null;
+        fos = new FileOutputStream(fileName, true);
+        fos.write(o.toString().getBytes());
+        fos.write("\r\n".getBytes());
+        fos.close();
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+}
+```
+
+El llamado del `Step` estaria asi: 
+
+```java
+@Bean
+  public Step step2() {
+      return steps.get("step2").
+                  <Integer, Integer>chunk(3)
+          .reader(jsonItemReader(null)) //lectura de archivos json
+          .writer(itemWriterClassfier())
+          .faultTolerant()
+          .skip(FlatFileParseException.class)
+          .skipPolicy(new AlwaysSkipItemSkipPolicy())//classifier para clasificacion de registros
+          .listener(new ProductListener()) // escucha el parseo de este proceso en concreto
+          .stream(xmlWritenAprobado()).stream(xmlWritenRechasado()) // seleccion de que metodo ejecutar
+          .build();
+  }
+```
+
+
+
 ## 🚀 About Me
 I'm a full stack developer...
 
