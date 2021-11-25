@@ -24,7 +24,7 @@
             <artifactId>spring-boot-starter-batch</artifactId>
         </dependency>
 
-        <!-- working with in memory datavase -->
+        <!-- working with in memory database -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-jdbc</artifactId>
